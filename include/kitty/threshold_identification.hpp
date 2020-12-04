@@ -78,6 +78,7 @@ bool is_positive_unate_in_x( const TT& tt, const uint8_t x ) //check if the func
     }
   return true;
 }
+template<typename TT, typename = std::enable_if_t<is_complete_truth_table<TT>::value>>
 bool is_negative_unate_in_x( const TT& tt, const uint8_t x ) //check if the function is negative unate in the variable x
 {
     auto numvars = tt.num_vars();
@@ -96,6 +97,7 @@ bool is_negative_unate_in_x( const TT& tt, const uint8_t x ) //check if the func
     }
   return true;
 }
+template<typename TT, typename = std::enable_if_t<is_complete_truth_table<TT>::value>>
 bool is_binate( const TT& tt ) //if the function is binate in any variable returns true
 {
   auto numvars = tt.num_vars();
@@ -152,6 +154,7 @@ void convert_to_binary(int64_t num,std::vector<char> bin_num, uint32_t _num_vars
   std::reverse(bin_num.begin(),bin_num.end())
   return;
 }
+template<typename TT, typename = std::enable_if_t<is_complete_truth_table<TT>::value>>
 bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
 {
   std::vector<int64_t> linear_form;
