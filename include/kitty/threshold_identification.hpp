@@ -58,7 +58,7 @@ namespace kitty
              in the end.
   \return `true` if `tt` is a TF; `false` if `tt` is a non-TF.
 */
-enum Constraint_Type { GE=1, LE, EQ }; //GE=1 /* >=      <=  == */
+//enum Constraint_Type { GE=1, LE, EQ }; //GE=1 /* >=      <=  == */
 template<typename TT, typename = std::enable_if_t<is_complete_truth_table<TT>::value>>
 bool is_positive_unate_in_x( const TT& tt, const uint8_t x ) //check if the function is positive unate in the variable x
 {
