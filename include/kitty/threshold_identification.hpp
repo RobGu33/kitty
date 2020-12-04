@@ -140,7 +140,7 @@ bool is_binate( const TT& tt ) //if the function is binate in any variable retur
   else
     return false;
 }
-void convert_to_binary(int64_t num,std::vector<char> bin_num, uint32_t _num_vars)
+void convert_to_binary(int64_t num,std::vector<char> bin_num, uint32_t num_vars)
 {
   uint32_t i=0;
   while(num!=0){
@@ -152,7 +152,7 @@ void convert_to_binary(int64_t num,std::vector<char> bin_num, uint32_t _num_vars
     i++;
     bin_num.emplace_back(0);
   }
-  std::reverse(bin_num.begin(),bin_num.end())
+  std::reverse(bin_num.begin(),bin_num.end());
   return;
 }
 template<typename TT, typename = std::enable_if_t<is_complete_truth_table<TT>::value>>
@@ -185,40 +185,40 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
   }*/
    lprec *plp;
    REAL row[tt.num_vars()+2];
-   plp=make_lp(0,num_vars()+1);
+   plp=make_lp(0,tt.num_vars()+1);
    if(plp == NULL){
       return false; //couldn't construct a new model
    }
-   set_add_rowmode(lp,TRUE);
+   set_add_rowmode(plp,TRUE);
    std::vector<char> binary;
    /*ONSET CONSTRAINTS*/
    for(auto i = 1u; i <= ONSET.size(); ++i){
-      convert_to_binary(ONSET(i),binary,tt.num_vars());
+      convert_to_binary(ONSET[i],binary,tt.num_vars());
       for ( auto k = 0u; k < tt.num_vars(); k++ ){
         if(is_negative_unate_in_x(tt,k)){
-           if(binary(k) == 0) binary(k)=1;
-           else binary(k)=0;
+           if(binary[k] == 0) binary[k]=1;
+           else binary[k]=0;
         }
       }
       for(auto j = 1u; j <= binary.size(); ++j){
-           row[j]= REAL(binary(j));
+           row[j]= REAL(binary[j]);
         }
-      row[j]=-1.0;
+      row[binary.size()]=-1.0;
       add_constraint(plp,row,GE,0);
    }
    /*OFFSET CONSTRAINTS*/
-   for(auto i = 1u; i <= ONSET.size(); ++i){
-      convert_to_binary(ONSET(i),binary,tt.num_vars());
+   for(auto i = 1u; i <= OFFSET.size(); ++i){
+      convert_to_binary(OFFSET[i],binary,tt.num_vars());
       for ( auto k = 0u; k < tt.num_vars(); k++ ){
         if(is_negative_unate_in_x(tt,k)){
-           if(binary(k) == 0) binary(k)=1;
-           else binary(k)=0;
+           if(binary[k]== 0) binary[k]=1;
+           else binary[k]=0;
         }
       }
       for(auto j = 1u; j <= binary.size(); ++j){
-           row[j]= REAL(binary(j));
+           row[j]= REAL(binary[j]);
         }
-      row[j]=-1.0;
+      row[binary.size()]=-1.0;
       add_constraint(plp,row,LE,-1.0);
    }
    set_add_rowmode(plp, FALSE);
@@ -226,9 +226,9 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
    for(auto i = 1u; i <= (ONSET.size()+1); ++i){
      row[i]=1.0;
    }
-   set_obj_fn(lp, row);
+   set_obj_fn(plp, row);
    /*SOLVE LP*/
-   set_minim(lp);
+   set_minim(plp);
    print_lp(plp);
   /* if tt is TF: */
   /* push the weight and threshold values into `linear_form` */
