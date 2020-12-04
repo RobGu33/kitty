@@ -134,6 +134,7 @@ bool is_binate( const TT& tt ) //if the function is binate in any variable retur
     }
    if (unate == false) count++;
   }
+  }
   if( count == numvars) //if it is binate with respect to all functions
     return true;
   else
@@ -237,7 +238,6 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
   }
   delete_lp(plp);
   return true;
-  }
 }
 
 } /* namespace kitty */
