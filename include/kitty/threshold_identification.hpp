@@ -162,11 +162,11 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
   /* TODO */
   std::vector<int64_t> ONSET, OFFSET;
   /* if tt is non-TF: */
-  if(is_binate) {// a function is binate in any variable, it is surely non-TF
+  if(is_binate(tt)) {// a function is binate in any variable, it is surely non-TF
      return false;
   }
   /*otherwise tt could be TF*/
-   for ( auto bit = tt.numvars - 1; bit > 0; bit-- )
+   for ( auto bit = tt.num_vars() - 1; bit > 0; bit-- )
     {
       if(get_bit( tt, bit ) == 1){ //then add it to the ONSET
           ONSET.emplace_back(bit);
