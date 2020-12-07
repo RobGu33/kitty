@@ -58,7 +58,6 @@ namespace kitty
              in the end.
   \return `true` if `tt` is a TF; `false` if `tt` is a non-TF.
 */
-//enum Constraint_Type { GE=1, LE, EQ }; //GE=1 /* >=      <=  == */
 template<typename TT, typename = std::enable_if_t<is_complete_truth_table<TT>::value>>
 bool is_positive_unate_in_x( const TT& tt, const uint8_t x ) //check if the function is positive unate in the variable x
 {
@@ -101,44 +100,12 @@ template<typename TT, typename = std::enable_if_t<is_complete_truth_table<TT>::v
 bool is_binate( const TT& tt ) //if the function is binate in any variable returns true
 {
   auto numvars = tt.num_vars();
-  auto count = 0; // count the number of variables with respect to which the function is binate
-  bool unate;
   for ( auto i = 0u; i < numvars; i++ )
   {
-    unate = true;
-    auto const tt1 = cofactor0( tt, i );
-    auto const tt2 = cofactor1( tt, i );
-    for ( auto bit = 0; bit < ( 2 << ( numvars - 1 ) ); bit++ )
-    {
-      if ( get_bit( tt1, bit ) >= get_bit( tt2, bit ) ) //negative unateness check
-      {
-        continue;
-      }
-      else
-      {
-        unate = false;
-      }
-    }
-    if(unate == false){
-    unate =true;
-    for ( auto bit = 0; bit < ( 2 << ( numvars - 1 ) ); bit++ )
-    {
-      if ( get_bit( tt1, bit ) <= get_bit( tt2, bit ) ) //positive unateness check
-      {
-        continue;
-      }
-      else
-      {
-        unate = false;
-      }
-    }
-   if (unate == false) count++;
+    if(!(is_negative_unate_in_x(tt,i) || is_positive_unate_in_x(tt,i)))
+      return false;
   }
-  }
-  if( count == numvars) //if it is binate with respect to all functions
     return true;
-  else
-    return false;
 }
 void convert_to_binary(int64_t num,std::vector<char> bin_num, uint32_t num_vars)
 {
@@ -159,14 +126,13 @@ template<typename TT, typename = std::enable_if_t<is_complete_truth_table<TT>::v
 bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
 {
   std::vector<int64_t> linear_form;
-  /* TODO */
   std::vector<int64_t> ONSET, OFFSET;
   /* if tt is non-TF: */
   if(is_binate(tt)) {// a function is binate in any variable, it is surely non-TF
      return false;
   }
   /*otherwise tt could be TF*/
-   for ( auto bit = tt.num_vars() - 1; bit > 0; bit-- )
+   for ( auto bit = (2^(tt.num_vars()) - 1); bit > 0; bit-- )
     {
       if(get_bit( tt, bit ) == 1){ //then add it to the ONSET
           ONSET.emplace_back(bit);
@@ -175,14 +141,6 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
          OFFSET.emplace_back(bit);
       }
     }
-    //NOT CORRECT
- /* for ( auto i = 0u; i < tt.num_vars(); i++ )
-  {
-    if(is_negative_unate_in_x(tt,i)){
-      //change x_i with bar(x_i) <=> exchanging ONSET with the OFFSET
-    ONSET(i)=swap(OFFSET(i));
-    }
-  }*/
    lprec *plp;
    REAL row[tt.num_vars()+2];
    plp=make_lp(0,tt.num_vars()+1);
@@ -227,9 +185,10 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
      row[i]=1.0;
    }
    set_obj_fn(plp, row);
+   /*PRINT LP*/
+   print_lp(plp);
    /*SOLVE LP*/
    set_minim(plp);
-   print_lp(plp);
   /* if tt is TF: */
   /* push the weight and threshold values into `linear_form` */
   if ( plf )
@@ -239,5 +198,4 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
   delete_lp(plp);
   return true;
 }
-
 } /* namespace kitty */
