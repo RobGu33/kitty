@@ -103,12 +103,13 @@ bool is_binate( const TT& tt ) //if the function is binate in any variable retur
   for ( auto i = 0u; i < numvars; i++ )
   {
     if(!(is_negative_unate_in_x(tt,i) || is_positive_unate_in_x(tt,i)))
-      return false;
+      return true;
   }
-    return true;
+    return false;
 }
-void convert_to_binary(int64_t num,std::vector<char> bin_num, uint32_t num_vars)
+std::vector<char> convert_to_binary(int64_t num, uint32_t num_vars)
 {
+  std::vector<char> bin_num;
   uint32_t i=0;
   while(num!=0){
     bin_num.emplace_back(num%2);
@@ -119,8 +120,7 @@ void convert_to_binary(int64_t num,std::vector<char> bin_num, uint32_t num_vars)
     i++;
     bin_num.emplace_back(0);
   }
-  std::reverse(bin_num.begin(),bin_num.end());
-  return;
+  return bin_num;
 }
 template<typename TT, typename = std::enable_if_t<is_complete_truth_table<TT>::value>>
 bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
@@ -132,7 +132,7 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
      return false;
   }
   /*otherwise tt could be TF*/
-   for ( auto bit = (2^(tt.num_vars()) - 1); bit > 0; bit-- )
+   for (auto bit = 0; bit < ( 2 << ( tt.num_vars() - 1 ) ); bit++)
     {
       if(get_bit( tt, bit ) == 1){ //then add it to the ONSET
           ONSET.emplace_back(bit);
@@ -147,38 +147,48 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
    if(plp == NULL){
       return false; //couldn't construct a new model
    }
-   set_add_rowmode(plp,TRUE);
    std::vector<char> binary;
+   set_add_rowmode(plp,TRUE);
    /*ONSET CONSTRAINTS*/
-   for(auto i = 1u; i <= ONSET.size(); ++i){
-      convert_to_binary(ONSET[i],binary,tt.num_vars());
+   for(auto i = 0u; i < ONSET.size(); ++i){
+      binary=convert_to_binary(ONSET[i],tt.num_vars());
       for ( auto k = 0u; k < tt.num_vars(); k++ ){
         if(is_negative_unate_in_x(tt,k)){
            if(binary[k] == 0) binary[k]=1;
            else binary[k]=0;
         }
       }
-      for(auto j = 1u; j <= binary.size(); ++j){
-           row[j]= REAL(binary[j]);
+      //std::reverse(binary.begin(),binary.end());
+      for(auto j = 0u; j < binary.size(); ++j){
+           row[j+1]= REAL(binary[j]);
         }
-      row[binary.size()]=-1.0;
+      row[binary.size()+1]=-1.0;
       add_constraint(plp,row,GE,0);
    }
    /*OFFSET CONSTRAINTS*/
-   for(auto i = 1u; i <= OFFSET.size(); ++i){
-      convert_to_binary(OFFSET[i],binary,tt.num_vars());
+   for(auto i = 0u; i < OFFSET.size(); ++i){
+      binary=convert_to_binary(OFFSET[i],tt.num_vars());
       for ( auto k = 0u; k < tt.num_vars(); k++ ){
         if(is_negative_unate_in_x(tt,k)){
            if(binary[k]== 0) binary[k]=1;
            else binary[k]=0;
         }
       }
-      for(auto j = 1u; j <= binary.size(); ++j){
-           row[j]= REAL(binary[j]);
+      //std::reverse(binary.begin(),binary.end());
+      for(auto j = 0u; j < binary.size(); ++j){
+           row[j+1]= REAL(binary[j]);
         }
-      row[binary.size()]=-1.0;
+      row[binary.size()+1]=-1.0;
       add_constraint(plp,row,LE,-1.0);
    }
+   /*GREATER THAN 0 CONSTRAINTS*/
+  for ( auto i = 0u; i < tt.num_vars()+1; i++ ){
+    for ( auto j = 0u; j <= tt.num_vars()+1; j++ ){
+      row[j] = 0;
+    }
+     row[i+1] = 1.0;
+     add_constraint(plp,row,GE,0);
+  }
    set_add_rowmode(plp, FALSE);
    /*SET OBJECTIVE FUNCTION*/
    for(auto i = 1u; i <= (ONSET.size()+1); ++i){
@@ -189,8 +199,30 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
    print_lp(plp);
    /*SOLVE LP*/
    set_minim(plp);
+   auto ret=solve(plp);
+   if(ret==2)
+   { //the model is infeasible hence the function is non-TF
+     return false;
+   }
   /* if tt is TF: */
   /* push the weight and threshold values into `linear_form` */
+  // double sol[1+tt.num_vars()+2+tt.num_vars()+1];
+  REAL sol[tt.num_vars()+1];
+   //get_primal_solution(plp,sol);
+  get_variables(plp, sol);
+   //for(auto i=1u; i<(1+tt.num_vars()+1) ;i++){
+  for(auto i=0u; i<(1+tt.num_vars()) ;i++){
+     linear_form.push_back(int64_t(sol[i]));
+     //linear_form.push_back(int64_t(sol[tt.num_vars()+2+i]));
+   }
+  for ( auto k = 0u; k < tt.num_vars(); k++ )
+   {
+     if ( is_negative_unate_in_x( tt, k ) )
+     {
+       linear_form[k] = -linear_form[k];
+       linear_form[linear_form.size() - 1] = linear_form[linear_form.size() - 1] + linear_form[k];
+     }
+   }
   if ( plf )
   {
     *plf = linear_form;
