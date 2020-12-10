@@ -39,6 +39,7 @@
 #include "cube.hpp"
 #include "algorithm.hpp"
 
+
 namespace kitty
 {
 
@@ -126,61 +127,47 @@ template<typename TT, typename = std::enable_if_t<is_complete_truth_table<TT>::v
 bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
 {
   std::vector<int64_t> linear_form;
-  std::vector<int64_t> ONSET, OFFSET;
+  std::vector<char> binary;
   /* if tt is non-TF: */
   if(is_binate(tt)) {// a function is binate in any variable, it is surely non-TF
      return false;
   }
   /*otherwise tt could be TF*/
-   for (auto bit = 0; bit < ( 2 << ( tt.num_vars() - 1 ) ); bit++)
-    {
-      if(get_bit( tt, bit ) == 1){ //then add it to the ONSET
-          ONSET.emplace_back(bit);
-      }
-      else{ //else add it to the OFFSET
-         OFFSET.emplace_back(bit);
-      }
-    }
    lprec *plp;
    REAL row[tt.num_vars()+2];
    plp=make_lp(0,tt.num_vars()+1);
    if(plp == NULL){
       return false; //couldn't construct a new model
    }
-   std::vector<char> binary;
    set_add_rowmode(plp,TRUE);
-   /*ONSET CONSTRAINTS*/
-   for(auto i = 0u; i < ONSET.size(); ++i){
-      binary=convert_to_binary(ONSET[i],tt.num_vars());
-      for ( auto k = 0u; k < tt.num_vars(); k++ ){
-        if(is_negative_unate_in_x(tt,k)){
-           if(binary[k] == 0) binary[k]=1;
-           else binary[k]=0;
-        }
+  /*CONSTRAINTS*/
+   int64_t l=0;
+  for(uint64_t i = tt.num_bits(); i > 0; i--){
+    binary=convert_to_binary(int64_t (l),tt.num_vars());
+    for ( auto k = 0u; k < tt.num_vars(); k++ )
+    {
+      if ( is_negative_unate_in_x( tt, k ) )
+      {
+        if ( binary[k] == 0 )
+          binary[k] = 1;
+        else
+          binary[k] = 0;
       }
-      //std::reverse(binary.begin(),binary.end());
-      for(auto j = 0u; j < binary.size(); ++j){
-           row[j+1]= REAL(binary[j]);
-        }
-      row[binary.size()+1]=-1.0;
-      add_constraint(plp,row,GE,0);
-   }
-   /*OFFSET CONSTRAINTS*/
-   for(auto i = 0u; i < OFFSET.size(); ++i){
-      binary=convert_to_binary(OFFSET[i],tt.num_vars());
-      for ( auto k = 0u; k < tt.num_vars(); k++ ){
-        if(is_negative_unate_in_x(tt,k)){
-           if(binary[k]== 0) binary[k]=1;
-           else binary[k]=0;
-        }
+    }
+      for ( auto j = 0u; j < binary.size(); ++j )
+      {
+        row[j + 1] = REAL( binary[j] );
       }
-      //std::reverse(binary.begin(),binary.end());
-      for(auto j = 0u; j < binary.size(); ++j){
-           row[j+1]= REAL(binary[j]);
-        }
-      row[binary.size()+1]=-1.0;
-      add_constraint(plp,row,LE,-1.0);
-   }
+      row[binary.size() + 1] = -1.0;
+      if(get_bit(tt,l)==1)
+      {
+        add_constraint( plp, row, GE, 0 );
+      }
+      else{
+        add_constraint(plp,row,LE,-1.0);
+      }
+    l++;
+    }
    /*GREATER THAN 0 CONSTRAINTS*/
   for ( auto i = 0u; i < tt.num_vars()+1; i++ ){
     for ( auto j = 0u; j <= tt.num_vars()+1; j++ ){
@@ -191,14 +178,18 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
   }
    set_add_rowmode(plp, FALSE);
    /*SET OBJECTIVE FUNCTION*/
-   for(auto i = 1u; i <= (ONSET.size()+1); ++i){
+   for(auto i = 1u; i <= (tt.num_vars()+1); ++i){
      row[i]=1.0;
    }
    set_obj_fn(plp, row);
    /*PRINT LP*/
-   print_lp(plp);
+   //print_lp(plp);
    /*SOLVE LP*/
    set_minim(plp);
+   /*SET INTEGERS*/
+  for(auto i = 1u; i <= (tt.num_vars()+1); ++i){
+    set_int(plp,i,TRUE);
+  }
    auto ret=solve(plp);
    if(ret==2)
    { //the model is infeasible hence the function is non-TF
@@ -206,14 +197,10 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
    }
   /* if tt is TF: */
   /* push the weight and threshold values into `linear_form` */
-  // double sol[1+tt.num_vars()+2+tt.num_vars()+1];
   REAL sol[tt.num_vars()+1];
-   //get_primal_solution(plp,sol);
   get_variables(plp, sol);
-   //for(auto i=1u; i<(1+tt.num_vars()+1) ;i++){
   for(auto i=0u; i<(1+tt.num_vars()) ;i++){
      linear_form.push_back(int64_t(sol[i]));
-     //linear_form.push_back(int64_t(sol[tt.num_vars()+2+i]));
    }
   for ( auto k = 0u; k < tt.num_vars(); k++ )
    {
