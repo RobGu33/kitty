@@ -134,7 +134,8 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
   }
   /*otherwise tt could be TF*/
    lprec *plp;
-   REAL row[tt.num_vars()+2];
+   REAL *row= nullptr;
+   row = (REAL *) malloc((tt.num_vars()+2) * sizeof(*row));
    plp=make_lp(0,tt.num_vars()+1);
    if(plp == NULL){
       return false; //couldn't construct a new model
@@ -183,7 +184,7 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
    }
    set_obj_fn(plp, row);
    /*PRINT LP*/
-   //print_lp(plp);
+   print_lp(plp);
    /*SOLVE LP*/
    set_minim(plp);
    /*SET INTEGERS*/
@@ -197,7 +198,8 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
    }
   /* if tt is TF: */
   /* push the weight and threshold values into `linear_form` */
-  REAL sol[tt.num_vars()+1];
+  REAL *sol= nullptr;
+  sol = (REAL *) malloc((tt.num_vars()+1) * sizeof(*sol));
   get_variables(plp, sol);
   for(auto i=0u; i<(1+tt.num_vars()) ;i++){
      linear_form.push_back(int64_t(sol[i]));
@@ -214,6 +216,11 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
   {
     *plf = linear_form;
   }
+  /*RELEASE MEMORY ALLOCATION*/
+  if(row != NULL)
+    free(row);
+  if(sol != NULL)
+    free(sol);
   delete_lp(plp);
   return true;
 }
