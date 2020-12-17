@@ -141,7 +141,7 @@ bool is_threshold( const TT& tt, std::vector<int64_t>* plf = nullptr )
       return false; //couldn't construct a new model
    }
    set_add_rowmode(plp,TRUE);
-  /*CONSTRAINTS ON THE ONSET AND ON THE OFFESET*/
+  /*CONSTRAINTS ON THE ONSET AND ON THE OFFSET*/
    int64_t l=0;
   for(uint64_t i = tt.num_bits(); i > 0; i--){
     binary=convert_to_binary(int64_t (l),tt.num_vars());
